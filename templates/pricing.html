@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Bảng giá{% endblock %}
+{% block content %}
+
+<div class="eyebrow">Bảng giá</div>
+<h1>Chọn gói phù hợp với bạn</h1>
+<p class="muted">Bao gồm đầy đủ: viết bài AI không giới hạn số lượng, đăng WordPress, Facebook Page, ghi Google Sheet.</p>
+
+{% if is_first_order %}
+<div class="card" style="background: var(--brass-tint); border-color: #E9D3A8; margin: 20px 0;">
+  <strong>🎉 Ưu đãi đăng ký lần đầu:</strong> giảm giá cho đơn hàng đầu tiên của bạn, áp dụng cho bất kỳ gói nào bên dưới.
+</div>
+{% endif %}
+
+<div class="pricing-grid">
+  {% for code, plan in plans.items() %}
+  <div class="price-card {% if code == 'lifetime' %}price-card-gold{% elif code == '12m' %}price-card-popular{% endif %}">
+
+    {% if code == 'lifetime' %}
+      <div class="price-card-tag price-card-tag-gold">👑 Không giới hạn</div>
+    {% elif code == '12m' %}
+      <div class="price-card-tag">⭐ Phổ biến nhất</div>
+    {% else %}
+      <div class="price-card-tag" style="visibility:hidden;">&nbsp;</div>
+    {% endif %}
+
+    <div class="price-card-label">{{ plan.label }}</div>
+    <div class="price-card-storage">{{ plan.slots }} bài viết cùng lúc</div>
+
+    <div class="price-card-price-block">
+      {% set base_price = plan.first_price if is_first_order else plan.price %}
+      {% set meq = monthly_eq(code, base_price) %}
+      {% if is_first_order %}<div class="price-card-old">{{ format_vnd(plan.price) }}</div>{% endif %}
+      {% if meq %}
+        <div class="price-card-now">{{ format_vnd(meq) }}<span class="price-card-unit">/tháng</span></div>
+        <div class="price-card-total-note">Thanh toán {{ format_vnd(base_price) }} / {{ plan.months }} tháng</div>
+      {% else %}
+        <div class="price-card-now">{{ format_vnd(base_price) }}</div>
+        <div class="price-card-total-note">Thanh toán 1 lần duy nhất</div>
+      {% endif %}
+      <div class="price-card-badges">
+        {% if is_first_order %}<span class="badge badge-on">Giá lần đầu</span>{% endif %}
+        {% set sav = savings_pct(code) %}
+        {% if sav > 0 %}<span class="badge-savings">Tiết kiệm {{ sav }}%</span>{% endif %}
+      </div>
+    </div>
+
+    {% if account %}
+      <form method="POST" action="{{ url_for('checkout', plan_code=code) }}">
+        <button type="submit" class="btn btn-block {% if code == 'lifetime' %}btn-gold{% else %}btn-primary{% endif %}">
+          {% if code == 'lifetime' %}Sở hữu Vĩnh Viễn (Tiết kiệm nhất)
+          {%- elif code == '12m' %}Nâng cấp &amp; Tiết kiệm {{ savings_pct(code) }}%
+          {%- elif code in ['3m', '6m'] %}Chọn gói - Tiết kiệm {{ savings_pct(code) }}%
+          {%- else %}Chọn gói này
+          {%- endif %}
+        </button>
+      </form>
+    {% else %}
+      <a href="{{ url_for('register') }}" class="btn btn-primary btn-block">Đăng ký để mua</a>
+    {% endif %}
+
+    <div class="price-card-divider"></div>
+
+    <ul class="price-card-features">
+      <li class="price-card-feature-highlight">
+        <span class="fcheck">✓</span> <strong>{{ plan.slots }}</strong> bài viết soạn cùng lúc
+      </li>
+      <li><span class="fcheck">✓</span> Viết bài AI không giới hạn số lượng</li>
+      <li><span class="fcheck">✓</span> Tự động đăng lên WordPress</li>
+      <li><span class="fcheck">✓</span> Tự động đăng lên Facebook Page</li>
+      <li><span class="fcheck">✓</span> Ghi lịch sử vào Google Sheet</li>
+    </ul>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="section-label" style="margin-top:34px;">So sánh chi tiết</div>
+<div class="card" style="padding:0; overflow-x:auto;">
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Tính năng</th>
+        {% for code, plan in plans.items() %}<th>{{ plan.label }}</th>{% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Bài viết soạn đồng thời</td>
+        {% for code, plan in plans.items() %}<td class="cval">{{ plan.slots }}</td>{% endfor %}
+      </tr>
+      <tr>
+        <td>Viết bài AI không giới hạn số lượng</td>
+        {% for code in plans %}<td class="ctick">✓</td>{% endfor %}
+      </tr>
+      <tr>
+        <td>Tự động đăng WordPress</td>
+        {% for code in plans %}<td class="ctick">✓</td>{% endfor %}
+      </tr>
+      <tr>
+        <td>Tự động đăng Facebook Page</td>
+        {% for code in plans %}<td class="ctick">✓</td>{% endfor %}
+      </tr>
+      <tr>
+        <td>Ghi lịch sử vào Google Sheet</td>
+        {% for code in plans %}<td class="ctick">✓</td>{% endfor %}
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card" style="margin-top:28px;">
+  <h3 style="margin-bottom:10px;">Chưa có tài khoản?</h3>
+  <p class="muted" style="margin:0;">Đăng ký miễn phí để dùng thử <strong>24 giờ</strong> trước khi quyết định mua gói.
+  {% if not account %}<a href="{{ url_for('register') }}">Đăng ký ngay</a>{% endif %}</p>
+</div>
+
+{% endblock %}

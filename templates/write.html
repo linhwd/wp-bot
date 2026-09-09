@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Viết bài mới{% endblock %}
+{% block content %}
+
+<div class="eyebrow">Bài viết mới</div>
+<h1>Viết bài với AI</h1>
+
+{% if not ready %}
+<div class="card" style="background: var(--error-tint); border-color: #E7C4C0;">
+  <h3 style="color: var(--error); margin-bottom:6px;">Chưa thể viết bài</h3>
+  <ul style="margin:0; padding-left:20px;">
+    {% if not access.active %}
+    <li>Bạn đã <strong>hết hạn dùng thử/gói</strong> - <a href="{{ url_for('pricing') }}">mua gói ngay</a> để tiếp tục.</li>
+    {% endif %}
+    {% if not wp_connected %}
+    <li>Bạn chưa kết nối <strong>WordPress</strong> - vào <a href="{{ url_for('settings') }}">Cài đặt</a> để kết nối.</li>
+    {% endif %}
+  </ul>
+</div>
+{% else %}
+
+<p class="muted" style="margin-top:-6px;">
+  Gói của bạn cho phép soạn tối đa <strong>{{ max_slots }}</strong> bài cùng lúc.
+</p>
+
+<div class="slot-tabs" id="slotTabs"></div>
+<div id="slotsContainer"></div>
+
+<!-- Khuôn mẫu 1 slot viết bài - JS sẽ nhân bản mỗi khi mở bài mới -->
+<template id="slotTemplate">
+  <div class="write-slot">
+    <div class="stepper">
+      <div class="step active" data-step="1"><span class="step-num">1</span> Chủ đề</div>
+      <div class="step-line"></div>
+      <div class="step" data-step="2"><span class="step-num">2</span> Xem trước</div>
+      <div class="step-line"></div>
+      <div class="step" data-step="3"><span class="step-num">3</span> Chuyên mục</div>
+      <div class="step-line"></div>
+      <div class="step" data-step="4"><span class="step-num">4</span> Ảnh</div>
+      <div class="step-line"></div>
+      <div class="step" data-step="5"><span class="step-num">5</span> Hoàn tất</div>
+    </div>
+
+    <!-- BƯỚC 1: CHỦ ĐỀ -->
+    <div class="write-panel active card" data-panel="1">
+      <h3>Chủ đề bài viết là gì?</h3>
+      {% if websites|length > 1 %}
+      <div class="field">
+        <label>Đăng bài như thế nào?</label>
+        <div class="publish-mode-toggle">
+          <button type="button" class="pm-btn active" data-role="mode-single-btn">1 website</button>
+          <button type="button" class="pm-btn" data-role="mode-multi-btn">Nhiều web - cùng nội dung</button>
+          <button type="button" class="pm-btn" data-role="mode-separate-btn">Nhiều web - mỗi web 1 bài riêng</button>
+        </div>
+      </div>
+
+      <div class="field" data-role="website-single-wrap">
+        <label>Chọn website</label>
+        <select data-role="website-select">
+          {% for w in websites %}
+          <option value="{{ w.id }}">{{ w.label or ('Website ' ~ loop.index) }} — {{ w.wp_url }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field" data-role="website-multi-wrap" style="display:none;">
+        <label>Chọn các website (đăng đồng thời CÙNG 1 bài - không gắn chuyên mục vì mỗi site có danh mục khác nhau)</label>
+        <div class="website-checklist">
+          {% for w in websites %}
+          <label class="website-check-item">
+            <input type="checkbox" data-role="website-check" value="{{ w.id }}">
+            <span>{{ w.label or ('Website ' ~ loop.index) }} — {{ w.wp_url }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="field" data-role="website-separate-wrap" style="display:none;">
+        <label>Chọn website và nhập CHỦ ĐỀ RIÊNG cho từng cái - mỗi website sẽ ra 1 bài viết khác nhau, viết song song</label>
+        <div class="website-checklist">
+          {% for w in websites %}
+          <div class="website-topic-item">
+            <label class="website-check-item">
+              <input type="checkbox" data-role="website-check-diff" value="{{ w.id }}">
+              <span>{{ w.label or ('Website ' ~ loop.index) }} — {{ w.wp_url }}</span>
+            </label>
+            <textarea data-role="website-topic-{{ w.id }}" rows="2" class="website-topic-textarea"
+                      placeholder="Chủ đề riêng cho website này..." style="display:none;"></textarea>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <input type="hidden" data-role="website-select" value="{{ websites[0].id if websites else '' }}">
+      {% endif %}
+      <div class="field" data-role="shared-topic-wrap">
+        <textarea data-role="topic-input" rows="3" placeholder="Ví dụ: lợi ích của việc uống đủ nước mỗi ngày"></textarea>
+      </div>
+      <button class="btn btn-primary" data-role="btn-generate">
+        <span data-role="btn-generate-label">✎ Viết bài</span>
+      </button>
+    </div>
+
+    <!-- BƯỚC 2: XEM TRƯỚC -->
+    <div class="write-panel card" data-panel="2">
+      <div data-role="preview-single-wrap">
+        <div class="ai-status" data-role="ai-status"><span class="ai-dot"></span> AI đang soạn thảo...</div>
+        <h3 data-role="preview-title">—</h3>
+        <p class="muted" style="font-size:13px;">Head key: <span data-role="preview-headkey" class="mono"></span></p>
+        <div class="preview-box" data-role="preview-content"></div>
+        <div style="display:flex; gap:10px; margin-top:18px;">
+          <button class="btn btn-primary" data-role="btn-confirm" disabled>✅ Xác nhận</button>
+          <button class="btn btn-secondary" data-role="btn-rewrite">🔄 Viết lại</button>
+          <button class="btn btn-danger" data-role="btn-cancel-2">✕ Hủy</button>
+        </div>
+      </div>
+
+      <div data-role="preview-batch-wrap" style="display:none;">
+        <div data-role="preview-batch-list"></div>
+        <button class="btn btn-primary" data-role="btn-batch-continue" style="margin-top:8px;" disabled>
+          Xác nhận hết mới đi tiếp →
+        </button>
+      </div>
+    </div>
+
+    <!-- BƯỚC 3: CHUYÊN MỤC -->
+    <div class="write-panel card" data-panel="3">
+      <h3>Chọn chuyên mục</h3>
+      <div data-role="category-single-wrap">
+        <div class="category-grid" data-role="category-grid"></div>
+      </div>
+      <div data-role="category-multi-wrap" style="display:none;"></div>
+      <button class="btn btn-primary" data-role="btn-category-next" style="margin-top:20px;">Tiếp tục →</button>
+    </div>
+
+    <!-- BƯỚC 4: ẢNH -->
+    <div class="write-panel card" data-panel="4">
+      <p class="muted" style="font-size:13px; margin-bottom:14px;">
+        Ảnh bìa và ảnh trong bài được <strong>AI tự tạo</strong> theo chủ đề bài viết.
+        Không ưng ý? Bấm "Đổi ảnh khác" để tìm ảnh khác, hoặc bấm trực tiếp vào ảnh để tự chọn ảnh riêng.
+      </p>
+
+      <div data-role="image-single-wrap">
+        <h3>Ảnh bìa (ảnh đại diện)</h3>
+        <label class="upload-zone" data-role="zone-cover">
+          <input type="file" accept="image/*" data-role="input-cover" style="display:none;">
+          <div class="upload-label">⏳ Đang tự tìm ảnh phù hợp...</div>
+        </label>
+        <div class="image-action-row">
+          <button type="button" class="btn btn-secondary btn-reroll" data-role="btn-reroll-cover">🔄 Đổi ảnh khác</button>
+          <button type="button" class="btn btn-secondary btn-reroll" data-role="btn-upload-cover">📤 Tải ảnh lên</button>
+        </div>
+
+        <h3 style="margin-top:24px;">Ảnh chèn trong bài viết</h3>
+        <label class="upload-zone" data-role="zone-inline">
+          <input type="file" accept="image/*" data-role="input-inline" style="display:none;">
+          <div class="upload-label">⏳ Đang tự tìm ảnh phù hợp...</div>
+        </label>
+        <div class="image-action-row">
+          <button type="button" class="btn btn-secondary btn-reroll" data-role="btn-reroll-inline">🔄 Đổi ảnh khác</button>
+          <button type="button" class="btn btn-secondary btn-reroll" data-role="btn-upload-inline">📤 Tải ảnh lên</button>
+        </div>
+      </div>
+
+      <div data-role="image-batch-wrap" style="display:none;"></div>
+
+      <button class="btn btn-primary" data-role="btn-publish" style="margin-top:22px;" disabled>
+        <span data-role="btn-publish-label">🚀 Đăng bài</span>
+      </button>
+    </div>
+
+    <!-- BƯỚC 5: HOÀN TẤT -->
+    <div class="write-panel card" data-panel="5">
+      <div class="result-panel">
+        <div class="result-icon">✓</div>
+        <h3>Đã đăng bài thành công!</h3>
+      </div>
+      <div data-role="result-rows"></div>
+      <div data-role="result-share" style="margin-top:20px;"></div>
+      <button class="btn btn-primary" data-role="btn-write-another" style="margin-top:20px;">✎ Viết bài khác</button>
+    </div>
+  </div>
+</template>
+
+<!-- Khuôn mẫu 1 mục xem trước trong lô "mỗi web 1 bài riêng" -->
+<template id="batchPreviewItemTemplate">
+  <div class="batch-item card">
+    <div class="batch-item-label" data-role="batch-item-label"></div>
+    <div class="ai-status" data-role="ai-status"><span class="ai-dot"></span> AI đang soạn thảo...</div>
+    <h3 data-role="preview-title">—</h3>
+    <p class="muted" style="font-size:13px;">Head key: <span data-role="preview-headkey" class="mono"></span></p>
+    <div class="preview-box" data-role="preview-content"></div>
+    <div style="display:flex; gap:10px; margin-top:14px;">
+      <button type="button" class="btn btn-primary" data-role="btn-confirm" disabled>✅ Xác nhận</button>
+      <button type="button" class="btn btn-secondary" data-role="btn-rewrite">🔄 Viết lại</button>
+    </div>
+  </div>
+</template>
+
+<!-- Khuôn mẫu 1 mục ảnh trong lô "mỗi web 1 bài riêng" -->
+<template id="batchImageItemTemplate">
+  <div class="batch-item card">
+    <div class="batch-item-label" data-role="batch-item-label"></div>
+    <h3 style="font-size:0.95rem;">Ảnh bìa</h3>
+    <label class="upload-zone" data-role="zone-cover">
+      <input type="file" accept="image/*" data-role="input-cover" style="display:none;">
+      <div class="upload-label">⏳ Đang tự tìm ảnh phù hợp...</div>
+    </label>
+    <div class="image-action-row">
+      <button type="button" class="btn btn-secondary btn-reroll" data-role="btn-reroll-cover">🔄 Đổi ảnh khác</button>
+      <button type="button" class="btn btn-secondary btn-reroll" data-role="btn-upload-cover">📤 Tải ảnh lên</button>
+    </div>
+
+    <h3 style="font-size:0.95rem; margin-top:16px;">Ảnh trong bài</h3>
+    <label class="upload-zone" data-role="zone-inline">
+      <input type="file" accept="image/*" data-role="input-inline" style="display:none;">
+      <div class="upload-label">⏳ Đang tự tìm ảnh phù hợp...</div>
+    </label>
+    <div class="image-action-row">
+      <button type="button" class="btn btn-secondary btn-reroll" data-role="btn-reroll-inline">🔄 Đổi ảnh khác</button>
+      <button type="button" class="btn btn-secondary btn-reroll" data-role="btn-upload-inline">📤 Tải ảnh lên</button>
+    </div>
+  </div>
+</template>
+
+<script>window.MAX_WRITE_SLOTS = {{ max_slots }};</script>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if ready %}
+<script src="{{ url_for('static', filename='js/write.js') }}"></script>
+{% endif %}
+{% endblock %}

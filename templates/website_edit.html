@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}{{ website.label or 'Website' }}{% endblock %}
+{% block content %}
+
+<div class="eyebrow">Cấu hình</div>
+<h1>{{ website.label or 'Website' }}</h1>
+<p class="muted"><a href="{{ url_for('settings') }}">← Quay lại danh sách website</a></p>
+
+<!-- Tên gợi nhớ -->
+<div class="card">
+  <div class="card-head"><h3>Tên gợi nhớ</h3></div>
+  <form method="POST" action="{{ url_for('edit_website', website_id=website.id) }}">
+    <input type="hidden" name="section" value="label">
+    <div class="field">
+      <input type="text" name="label" value="{{ website.label or '' }}" placeholder="VD: Web chính, Blog phụ...">
+    </div>
+    <button type="submit" class="btn btn-primary">Lưu tên</button>
+  </form>
+</div>
+
+<!-- WordPress -->
+<div class="card">
+  <div class="card-head">
+    <h3>WordPress</h3>
+    {% if website.wp_url %}<span class="badge badge-on"><span class="badge-dot"></span> Đã kết nối</span>{% endif %}
+  </div>
+  <form method="POST" action="{{ url_for('edit_website', website_id=website.id) }}">
+    <input type="hidden" name="section" value="wordpress">
+    <div class="field">
+      <label>Link Website</label>
+      <input type="url" name="wp_url" placeholder="https://yourwebsite.com" value="{{ website.wp_url or '' }}">
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="wp_username" value="{{ website.wp_username or '' }}">
+      </div>
+      <div class="field">
+        <label>Application Password</label>
+        <input type="text" class="mono-input" name="wp_app_password" placeholder="{% if website.wp_app_password %}•••• •••• •••• ••••{% else %}xxxx xxxx xxxx xxxx{% endif %}">
+      </div>
+    </div>
+    <div class="field">
+      <label>Trạng thái đăng bài mặc định</label>
+      <select name="wp_status">
+        <option value="draft" {% if website.wp_status=='draft' %}selected{% endif %}>Draft (lưu nháp, cần duyệt tay)</option>
+        <option value="publish" {% if website.wp_status=='publish' %}selected{% endif %}>Publish (đăng ngay công khai)</option>
+      </select>
+    </div>
+    <div class="hint" style="margin-bottom:14px;">
+      Application Password tạo tại: WP Admin → Users → Profile → Application Passwords (KHÔNG PHẢI mật khẩu đăng nhập thường).
+    </div>
+    <button type="submit" class="btn btn-primary">Lưu WordPress</button>
+  </form>
+</div>
+
+<!-- Google Sheet -->
+<div class="card">
+  <div class="card-head">
+    <h3>Google Sheet <span class="muted" style="font-weight:400;">(tùy chọn)</span></h3>
+    {% if website.sheet_id %}<span class="badge badge-on"><span class="badge-dot"></span> Đã kết nối</span>{% endif %}
+  </div>
+  {% if sheets_enabled %}
+  <form method="POST" action="{{ url_for('edit_website', website_id=website.id) }}">
+    <input type="hidden" name="section" value="sheet">
+    <div class="field">
+      <label>Link Google Sheet</label>
+      <input type="url" name="sheet_link" placeholder="https://docs.google.com/spreadsheets/d/..." value="{% if website.sheet_id %}https://docs.google.com/spreadsheets/d/{{ website.sheet_id }}/edit{% endif %}">
+      <div class="hint">Trước khi lưu, hãy Share Sheet cho email này với quyền Editor: <code class="mono">{{ service_account_email }}</code></div>
+    </div>
+    <button type="submit" class="btn btn-primary">Lưu Google Sheet</button>
+  </form>
+  {% else %}
+  <p class="muted">Tính năng Google Sheets hiện chưa được bật cho hệ thống này.</p>
+  {% endif %}
+</div>
+
+<!-- Facebook -->
+<div class="card">
+  <div class="card-head">
+    <h3>Facebook Page <span class="muted" style="font-weight:400;">(tùy chọn)</span></h3>
+    {% if website.fb_page_id %}<span class="badge badge-on"><span class="badge-dot"></span> Đã kết nối</span>{% endif %}
+  </div>
+  <form method="POST" action="{{ url_for('edit_website', website_id=website.id) }}">
+    <input type="hidden" name="section" value="facebook">
+    <div class="grid-2">
+      <div class="field">
+        <label>Page ID</label>
+        <input type="text" class="mono-input" name="fb_page_id" value="{{ website.fb_page_id or '' }}">
+      </div>
+      <div class="field">
+        <label>Access Token</label>
+        <input type="text" class="mono-input" name="fb_page_token" placeholder="{% if website.fb_page_token %}•••••••••••••••• (đã lưu){% endif %}">
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary">Lưu Facebook Page</button>
+  </form>
+</div>
+
+<!-- CTA -->
+<div class="card">
+  <div class="card-head"><h3>Câu CTA cuối bài</h3></div>
+  <form method="POST" action="{{ url_for('edit_website', website_id=website.id) }}">
+    <input type="hidden" name="section" value="cta">
+    <div class="field">
+      <label>Nội dung CTA</label>
+      <textarea name="cta_text" rows="2" placeholder="{{ default_cta }}">{{ website.cta_text or '' }}</textarea>
+    </div>
+    <div class="field">
+      <label>Link CTA (để trống = dùng link WordPress)</label>
+      <input type="url" name="cta_url" value="{{ website.cta_url or '' }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Lưu CTA</button>
+  </form>
+</div>
+
+{% endblock %}

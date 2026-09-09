@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Admin - Đơn hàng{% endblock %}
+{% block content %}
+
+<div class="eyebrow">Quản trị</div>
+<h1>Đơn hàng {% if filter_status == 'pending' %}chờ duyệt{% else %}tất cả{% endif %}</h1>
+
+<div style="margin: 16px 0 24px;">
+  <a href="{{ url_for('admin_dashboard') }}" class="btn {% if filter_status=='pending' %}btn-primary{% else %}btn-secondary{% endif %}">Chờ duyệt</a>
+  <a href="{{ url_for('admin_orders_all') }}" class="btn {% if not filter_status %}btn-primary{% else %}btn-secondary{% endif %}">Tất cả</a>
+</div>
+
+{% if orders %}
+<div class="card" style="padding:0;">
+  {% for o in orders %}
+  <div style="padding: 16px 22px; border-bottom: 1px solid var(--line);">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:16px;">
+      <div>
+        <strong>{{ o.order_code }}</strong>
+        <span class="badge {% if o.status=='paid' %}badge-on{% elif o.status=='rejected' %}badge-off{% else %}badge-off{% endif %}" style="margin-left:8px;">
+          {% if o.status == 'paid' %}Đã duyệt{% elif o.status == 'rejected' %}Đã từ chối{% else %}Chờ duyệt{% endif %}
+        </span>
+        <br>
+        <span class="muted" style="font-size:13.5px;">
+          {{ o.display_name or o.email }} · {{ o.plan_code }} ({{ o.months }} tháng) · <strong>{{ format_vnd(o.amount) }}</strong>
+          {% if o.is_first_order %}· <span style="color: var(--brass);">ưu đãi lần đầu</span>{% endif %}
+        </span>
+        <br>
+        <span class="muted" style="font-size:12px;">{{ o.created_at[:16].replace('T',' ') }}</span>
+      </div>
+      {% if o.status == 'pending' %}
+      <div style="display:flex; gap:8px; flex-shrink:0;">
+        <form method="POST" action="{{ url_for('admin_approve_order', order_id=o.id) }}">
+          <button type="submit" class="btn btn-primary" style="padding:8px 14px; font-size:13px;">✓ Duyệt</button>
+        </form>
+        <form method="POST" action="{{ url_for('admin_reject_order', order_id=o.id) }}">
+          <button type="submit" class="btn btn-danger" style="padding:8px 14px; font-size:13px;">✕ Từ chối</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted">Không có đơn hàng nào.</p>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Lịch sử bài viết{% endblock %}
+{% block content %}
+
+<div class="eyebrow">Nhật ký</div>
+<h1>Lịch sử bài viết</h1>
+<p class="muted">Tổng cộng <strong>{{ total }}</strong> bài đã đăng.</p>
+
+<div class="card" style="padding: 8px 0;">
+  {% if posts %}
+    {% for post in posts %}
+      <div class="recent-post-row">
+        <div class="recent-post-info">
+          {% if post.link %}
+            <a href="{{ post.link }}" target="_blank" class="recent-post-title">{{ post.title }}</a>
+          {% else %}
+            <span class="recent-post-title">{{ post.title }}</span>
+          {% endif %}
+          <span class="recent-post-date">
+            {{ post.created_at[:16].replace('T', ' ') }}
+            {% if post.category %} · {{ post.category }}{% endif %}
+          </span>
+        </div>
+        <span class="badge {{ 'badge-on' if post.status == 'publish' else 'badge-off' }}">
+          <span class="badge-dot"></span> {{ 'Đã đăng' if post.status == 'publish' else 'Bản nháp' }}
+        </span>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted" style="padding: 14px 20px; margin: 0;">Chưa có bài viết nào. Bấm "Viết bài mới" để bắt đầu.</p>
+  {% endif %}
+</div>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+    <a href="{{ url_for('posts_history', page=page-1) }}" class="page-btn">← Trước</a>
+  {% else %}
+    <span class="page-btn disabled">← Trước</span>
+  {% endif %}
+
+  <span class="page-info">Trang {{ page }} / {{ total_pages }}</span>
+
+  {% if page < total_pages %}
+    <a href="{{ url_for('posts_history', page=page+1) }}" class="page-btn">Sau →</a>
+  {% else %}
+    <span class="page-btn disabled">Sau →</span>
+  {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}

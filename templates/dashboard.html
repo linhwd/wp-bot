@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Tổng quan{% endblock %}
+{% block content %}
+
+<div class="dash-header">
+  <div class="dash-avatar">{{ (account.display_name or account.email or 'B')[0] | upper }}</div>
+  <div>
+    <div class="eyebrow">Xin chào</div>
+    <h1>{{ account.display_name or account.email or 'Bạn' }} 👋</h1>
+  </div>
+</div>
+<p class="muted">Đây là nơi bạn theo dõi kết nối và bắt đầu viết bài mới.</p>
+
+{% set access = access %}
+<div class="card" style="{% if access and access.active %}background: var(--press-tint); border-color: #BFE0D3;{% else %}background: var(--error-tint); border-color: #E7C4C0;{% endif %} margin: 22px 0;">
+  {% if access and access.active %}
+    {% if access.source == 'trial' %}
+      <h3 style="margin-bottom:4px;">🎁 Đang dùng thử miễn phí</h3>
+      <p style="margin:0;">Hết hạn lúc <strong>{{ access.expires_at.strftime('%H:%M %d/%m/%Y') }}</strong>. <a href="{{ url_for('pricing') }}">Mua gói ngay</a> để không bị gián đoạn.</p>
+    {% else %}
+      <h3 style="margin-bottom:4px; color: var(--press-dark);">✅ Gói đang hoạt động</h3>
+      <p style="margin:0;">Còn hạn tới <strong>{{ access.expires_at.strftime('%d/%m/%Y') }}</strong>. <a href="{{ url_for('billing') }}">Xem chi tiết gói</a></p>
+    {% endif %}
+  {% else %}
+    <h3 style="margin-bottom:4px; color: var(--error);">⚠️ Đã hết hạn dùng thử/gói</h3>
+    <p style="margin:0;">Bạn cần <a href="{{ url_for('pricing') }}">mua gói</a> để tiếp tục dùng tính năng viết bài AI.</p>
+  {% endif %}
+</div>
+
+<div style="display:flex; gap:12px; margin: 0 0 30px;">
+  <a href="{{ url_for('write_page') }}" class="btn btn-primary">✎ Viết bài mới</a>
+  <a href="{{ url_for('settings') }}" class="btn btn-secondary">⚙ Kết nối &amp; Cài đặt</a>
+</div>
+
+<div class="section-label">Số liệu tổng quan</div>
+<div class="stats-row">
+  <div class="stat-icon-card">
+    <div class="stat-icon stat-icon-emerald"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg></div>
+    <div>
+      <div class="stat-icon-value">{{ stat_posts }}</div>
+      <div class="stat-icon-label">Bài đã đăng</div>
+    </div>
+  </div>
+  <div class="stat-icon-card">
+    <div class="stat-icon stat-icon-gold"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a3 3 0 106 0 3 3 0 00-6 0z"/><path d="M4.5 12a7.5 7.5 0 0115 0"/></svg></div>
+    <div>
+      <div class="stat-icon-value">{{ websites|length }}{% if max_sites is not none %}<span class="muted" style="font-size:0.9rem;">/{{ max_sites }}</span>{% endif %}</div>
+      <div class="stat-icon-label">Website đã kết nối</div>
+    </div>
+  </div>
+  <div class="stat-icon-card">
+    <div class="stat-icon stat-icon-emerald"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+    <div>
+      <div class="stat-icon-value">{{ stat_success_rate }}%</div>
+      <div class="stat-icon-label">Tỷ lệ đăng thành công</div>
+    </div>
+  </div>
+</div>
+
+<div class="section-label" style="justify-content: flex-start; gap: 10px;">
+  Bài viết gần đây
+  <a href="{{ url_for('posts_history') }}" class="section-label-link">Xem tất cả →</a>
+</div>
+<div class="card" style="padding: 8px 0;">
+  {% if recent_posts %}
+    {% for post in recent_posts %}
+      <div class="recent-post-row">
+        <div class="recent-post-info">
+          {% if post.link %}
+            <a href="{{ post.link }}" target="_blank" class="recent-post-title">{{ post.title }}</a>
+          {% else %}
+            <span class="recent-post-title">{{ post.title }}</span>
+          {% endif %}
+          <span class="recent-post-date">{{ post.created_at[:16].replace('T', ' ') }}</span>
+        </div>
+        <span class="badge {{ 'badge-on' if post.status == 'publish' else 'badge-off' }}">
+          <span class="badge-dot"></span> {{ 'Đã đăng' if post.status == 'publish' else 'Bản nháp' }}
+        </span>
+      </div>
+    {% endfor %}
+  {% else %}
+    <p class="muted" style="padding: 14px 20px; margin: 0;">Chưa có bài viết nào. Bấm "Viết bài mới" để bắt đầu.</p>
+  {% endif %}
+</div>
+
+<div class="grid-2" style="grid-template-columns: 1.2fr 1fr; align-items: start;">
+  <div>
+    <div class="section-label">Danh mục phổ biến</div>
+    <div class="card">
+      {% if category_stats %}
+        {% for cat in category_stats %}
+          <div class="cat-stat-row">
+            <div class="cat-stat-top">
+              <span>{{ cat.name }}</span>
+              <span class="muted">{{ cat.count }} bài</span>
+            </div>
+            <div class="cat-stat-bar"><div class="cat-stat-fill" style="width:{{ cat.pct }}%;"></div></div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted" style="margin:0;">Chưa có dữ liệu chuyên mục.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div>
+    <div class="section-label">Hoạt động gần đây</div>
+    <div class="card" style="padding: 6px 0;">
+      {% if recent_activity %}
+        {% for item in recent_activity %}
+          <div class="activity-row">
+            <span class="activity-icon">{{ item.icon }}</span>
+            <div>
+              <div class="activity-text">{{ item.text }}</div>
+              <div class="activity-time">{{ item.created_at[:16].replace('T', ' ') }}</div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <p class="muted" style="padding: 14px 20px; margin: 0;">Chưa có hoạt động nào.</p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="section-label">Website đã kết nối</div>
+<div class="grid-2">
+  {% for w in websites %}
+  <div class="card">
+    <div class="card-head">
+      <h3>{{ w.label or ('Website ' ~ loop.index) }}</h3>
+      {% if w.wp_url %}
+        <span class="badge badge-on"><span class="badge-dot"></span> Đã kết nối</span>
+      {% else %}
+        <span class="badge badge-off"><span class="badge-dot"></span> Chưa cấu hình</span>
+      {% endif %}
+    </div>
+    <p class="muted" style="margin:0 0 8px; font-size:14px;">{{ w.wp_url or 'Chưa nhập link WordPress' }}</p>
+    <div style="display:flex; gap:6px;">
+      {% if w.fb_page_id %}<span class="badge badge-on" style="font-size:0.66rem;">Facebook</span>{% endif %}
+      {% if w.sheet_id %}<span class="badge badge-on" style="font-size:0.66rem;">Sheet</span>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+
+  {% if not websites %}
+  <div class="card">
+    <p class="muted" style="margin:0;">Chưa kết nối website nào. <a href="{{ url_for('settings') }}">Kết nối ngay</a> để bắt đầu viết bài.</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="card" style="background: var(--brass-tint); border-color: #E9D3A8;">
+  <h3 style="margin-bottom:6px;">💡 Cũng dùng được qua Telegram</h3>
+  <p class="muted" style="margin:0; font-size:14px;">
+    Tài khoản này dùng chung dữ liệu với bot Telegram. Nếu chưa liên kết, mở chat với bot và gõ:
+    <code class="mono">/link_web {{ account.email or 'ban@email.com' }} | mật_khẩu_ban_đang_dùng</code>
+    để đồng bộ 2 nơi.
+  </p>
+</div>
+
+{% endblock %}

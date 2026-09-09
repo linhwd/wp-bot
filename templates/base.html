@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}Bảng điều khiển{% endblock %} · Bút Máy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body data-theme="light">
+
+<div class="noise"></div>
+<div class="cursor-glow" id="cursorGlow"></div>
+<div class="ambient">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+</div>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">B</div>
+      <div class="brand-name">Bút Máy<small>Content Ops</small></div>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Làm việc</div>
+      <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint=='dashboard' %}active{% endif %}">
+        <span class="ico">◧</span> Tổng quan
+      </a>
+      <a href="{{ url_for('write_page') }}" class="nav-link {% if request.endpoint=='write_page' %}active{% endif %}">
+        <span class="ico">✎</span> Viết bài mới
+      </a>
+      <a href="{{ url_for('posts_history') }}" class="nav-link {% if request.endpoint=='posts_history' %}active{% endif %}">
+        <span class="ico">🗂</span> Lịch sử bài viết
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-label">Tài khoản</div>
+      <a href="{{ url_for('billing') }}" class="nav-link {% if request.endpoint=='billing' %}active{% endif %}">
+        <span class="ico">💳</span> Gói của tôi
+      </a>
+      <a href="{{ url_for('settings') }}" class="nav-link {% if request.endpoint=='settings' %}active{% endif %}">
+        <span class="ico">⚙</span> Kết nối &amp; Cài đặt
+      </a>
+    </div>
+
+    {% if account and account.is_admin %}
+    <div class="nav-group">
+      <div class="nav-label">Quản trị</div>
+      <a href="{{ url_for('admin_dashboard') }}" class="nav-link {% if request.endpoint in ['admin_dashboard','admin_orders_all'] %}active{% endif %}">
+        <span class="ico">🛡</span> Admin - Đơn hàng
+      </a>
+    </div>
+    {% endif %}
+
+    {% if access and access.active and access.source == 'subscription' and current_plan %}
+    <div class="plan-badge-card">
+      <div class="plan-badge-icon">👑</div>
+      <div class="plan-badge-info">
+        <div class="plan-badge-title">Gói {{ current_plan.label }}</div>
+        <div class="plan-badge-sub">{{ current_plan.slots }} bài viết cùng lúc</div>
+      </div>
+    </div>
+    {% else %}
+    <div class="premium-card">
+      <div class="premium-crown">👑</div>
+      <div class="premium-title">Nâng cấp Premium</div>
+      <p class="premium-desc">Mở khoá toàn bộ tính năng và trải nghiệm không giới hạn</p>
+      <a href="{{ url_for('pricing') }}" class="premium-btn">Nâng cấp ngay →</a>
+    </div>
+    {% endif %}
+
+    <div class="theme-toggle">
+      <button data-theme-btn="light">☀ <span class="label">Sáng</span></button>
+      <button data-theme-btn="dark">☾ <span class="label">Tối</span></button>
+    </div>
+
+    <div class="sidebar-footer">
+      {% set account = account or None %}
+      {% if account %}
+        <div style="margin-bottom:8px;">{{ account.email or ('Telegram #' ~ account.telegram_user_id) }}</div>
+      {% endif %}
+      <a href="{{ url_for('logout') }}">Đăng xuất</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="topbar-search">🔍 <span>Tìm bài viết, kết nối, cài đặt…</span></div>
+      <div class="topbar-right">
+        <div class="topbar-menu-wrap">
+          <button class="topbar-icon-btn" id="bellBtn" type="button">
+            🔔
+            {% if access and ((access.active and access.source == 'trial') or not access.active) %}<span class="topbar-dot"></span>{% endif %}
+          </button>
+          <div class="topbar-dropdown" id="bellDropdown">
+            {% if access and access.active and access.source == 'trial' %}
+              <div class="topbar-dropdown-item">🎁 Gói dùng thử hết hạn lúc {{ access.expires_at.strftime('%H:%M %d/%m') }}</div>
+            {% elif access and not access.active %}
+              <div class="topbar-dropdown-item">⚠️ Gói của bạn đã hết hạn</div>
+            {% else %}
+              <div class="topbar-dropdown-item muted-item">Không có thông báo mới</div>
+            {% endif %}
+          </div>
+        </div>
+        <div class="topbar-menu-wrap">
+          <button class="topbar-avatar-btn" id="avatarBtn" type="button">
+            <span class="topbar-avatar">{{ (account.display_name or account.email or 'B')[0] | upper if account else 'B' }}</span>
+            <span class="topbar-avatar-name">{{ account.display_name or (account.email.split('@')[0] if account and account.email else 'Tài khoản') }}</span>
+            <span class="topbar-caret">▾</span>
+          </button>
+          <div class="topbar-dropdown topbar-dropdown-right" id="avatarDropdown">
+            <a href="{{ url_for('settings') }}">⚙ Kết nối &amp; Cài đặt</a>
+            <a href="{{ url_for('billing') }}">💳 Gói của tôi</a>
+            <a href="{{ url_for('logout') }}">↪ Đăng xuất</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

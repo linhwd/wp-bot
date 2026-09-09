@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Kết nối & Cài đặt{% endblock %}
+{% block content %}
+
+<div class="eyebrow">Cấu hình</div>
+<h1>Kết nối &amp; Cài đặt</h1>
+<p class="muted">
+  Mỗi website có WordPress + Facebook Page + Google Sheet + câu CTA riêng, độc lập hoàn toàn.
+  Gói của bạn cho phép kết nối tối đa
+  <strong>{{ 'không giới hạn' if max_sites is none else max_sites }}</strong> website
+  (hiện đã dùng {{ websites|length }}{% if max_sites is not none %}/{{ max_sites }}{% endif %}).
+</p>
+
+<div class="grid-2">
+  {% for w in websites %}
+  <div class="card">
+    <div class="card-head">
+      <h3>{{ w.label or ('Website ' ~ loop.index) }}</h3>
+      {% if w.wp_url %}
+        <span class="badge badge-on"><span class="badge-dot"></span> Đã kết nối</span>
+      {% else %}
+        <span class="badge badge-off"><span class="badge-dot"></span> Chưa cấu hình</span>
+      {% endif %}
+    </div>
+    <p class="muted" style="margin:0 0 10px; font-size:14px;">{{ w.wp_url or 'Chưa nhập link WordPress' }}</p>
+    <div style="display:flex; gap:6px; margin-bottom:16px;">
+      {% if w.fb_page_id %}<span class="badge badge-on" style="font-size:0.66rem;">Facebook</span>{% endif %}
+      {% if w.sheet_id %}<span class="badge badge-on" style="font-size:0.66rem;">Sheet</span>{% endif %}
+    </div>
+    <div style="display:flex; gap:10px;">
+      <a href="{{ url_for('edit_website', website_id=w.id) }}" class="btn btn-secondary">✎ Sửa</a>
+      <form method="POST" action="{{ url_for('delete_website', website_id=w.id) }}"
+            onsubmit="return confirm('Xoá website này? Không thể hoàn tác.');" style="margin:0;">
+        <button type="submit" class="btn btn-danger">Xoá</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if not websites %}
+<div class="card" style="margin-top:16px;">
+  <p class="muted" style="margin:0;">Bạn chưa kết nối website nào. Thêm website đầu tiên để bắt đầu viết bài.</p>
+</div>
+{% endif %}
+
+{% if max_sites is none or websites|length < max_sites %}
+<form method="POST" action="{{ url_for('create_website') }}" style="margin-top:16px;">
+  <button type="submit" class="btn btn-primary">+ Thêm website</button>
+</form>
+{% else %}
+<p class="muted" style="margin-top:16px;">
+  Bạn đã dùng hết {{ max_sites }} website của gói hiện tại.
+  <a href="{{ url_for('pricing') }}">Nâng cấp gói</a> để kết nối thêm.
+</p>
+{% endif %}
+
+{% endblock %}

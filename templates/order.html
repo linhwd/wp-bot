@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Đơn hàng {{ order.order_code }}{% endblock %}
+{% block content %}
+
+<div class="eyebrow">Đơn hàng</div>
+<h1>{{ order.order_code }}</h1>
+
+{% if order.status == 'paid' %}
+  <div class="card" style="background: var(--press-tint); border-color: #BFE0D3; text-align:center;">
+    <h3 style="color: var(--press-dark);">✅ Đã thanh toán thành công</h3>
+    <p style="margin:0;">Gói của bạn đã được kích hoạt. <a href="{{ url_for('write_page') }}">Bắt đầu viết bài ngay</a></p>
+  </div>
+{% elif order.status == 'rejected' %}
+  <div class="card" style="background: var(--error-tint); border-color: #E7C4C0; text-align:center;">
+    <h3 style="color: var(--error);">Đơn hàng đã bị từ chối</h3>
+    <p style="margin:0;">Liên hệ hỗ trợ nếu bạn nghĩ đây là nhầm lẫn.</p>
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-head">
+      <h3>Chờ xác nhận thanh toán</h3>
+      <span class="badge badge-off">Đang chờ</span>
+    </div>
+    <p class="muted">Gói: <strong>{{ plan.label if plan else order.plan_code }}</strong> · Số tiền cần chuyển: <strong style="color: var(--press-dark); font-size:18px;">{{ format_vnd(order.amount) }}</strong></p>
+
+    {% if bank_configured %}
+    <div style="text-align:center; margin: 20px 0;">
+      <img src="{{ qr_url }}" alt="Mã QR chuyển khoản" style="max-width: 280px; border-radius: 10px; border: 1px solid var(--line);">
+    </div>
+    <div class="result-row"><span class="muted">Số tài khoản</span><span class="mono">{{ bank_account_no }}</span></div>
+    <div class="result-row"><span class="muted">Chủ tài khoản</span><span>{{ bank_account_name }}</span></div>
+    <div class="result-row"><span class="muted">Nội dung chuyển khoản</span><span class="mono">{{ order.order_code }}</span></div>
+    <div class="hint" style="margin-top:14px;">
+      Quét mã QR bằng app ngân hàng để tự điền sẵn thông tin, hoặc chuyển khoản thủ công với đúng nội dung
+      <strong>{{ order.order_code }}</strong> để hệ thống đối soát nhanh hơn. Sau khi chuyển khoản, gói sẽ được kích hoạt
+      trong ít phút sau khi được xác nhận.
+    </div>
+    {% else %}
+    <p class="muted">Hệ thống chưa cấu hình thông tin ngân hàng. Vui lòng liên hệ trực tiếp để thanh toán.</p>
+    {% endif %}
+  </div>
+
+  <a href="{{ url_for('billing') }}" class="btn btn-secondary" style="margin-top:16px;">← Quay lại Gói của tôi</a>
+{% endif %}
+
+{% endblock %}
